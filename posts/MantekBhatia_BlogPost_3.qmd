@@ -117,3 +117,16 @@ textplot_network(Smaller_fsm, vertex_size = size / max(size) * 3)
 
 #kwic_party <- kwic(reddit_DnD_characters, pattern = phrase("party")); head(kwic_party, n=10)
 ```
+
+This is a preview of what the data is like in the Reddit threads. Right now there are a lot of frequent words as features which do not give us a lot of information, however, there are a few features that talk about the type/class of characters players usually choose which can give us a lot of insights.  
+
+
+&nbsp;  
+&nbsp;  
+&nbsp;  
+
+## Next Steps  
+
+-   Find more threads to scrap more comments.  
+-   Clean/Preprocess the features obtained to extract more nuanced information from the threads.  
+-   Think about what other methods introduced in the Text-as-Data class can be applied to the data to find meaningful observations from the data.  
