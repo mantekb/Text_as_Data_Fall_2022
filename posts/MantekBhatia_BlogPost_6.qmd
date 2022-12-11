@@ -1,0 +1,430 @@
+---
+title: "Blog Post 6"
+author: "Mantek Singh Bhatia"
+desription: "Blog Post 6"
+date: "12/10/2022"
+format:
+  pdf: 
+    toc: true
+    number-sections: true
+categories:
+  - Blog Post 6
+  - Mantek Singh Bhatia
+  - Self-Identity
+  - Online Gaming
+  - Avatars
+  - Characterization
+---
+
+## Research Objective
+
+My research objective for this project is to understand how people characterize their avatars in games.
+
+::: callout-important
+Research Question:
+
+1.  Do the players talk about their character in a positive sense or a negative sense when they describe their character?\
+2.  Using Topic Modeling, will the topics identified be equal to the number of character classes defined in the game? If not, which class of characters is missing?
+:::
+
+Creating avatars in games gives people the freedom to be creative and cultivate an alternate identity. Now, this identity can be their "ideal self" or something that they just create for fun. To understand this process of creating identities I want to first examine the avatars people have already made. For this context I am thinking of scouring Reddit to find threads that talk about people describing the avatars/characters they have created while playing "Dungeons and Dragons".
+
+ \
+ \
+ 
+
+## Data Collection
+
+I was able to scrap data from multiple Reddit threads where users talk about their characters that they have created while playing a Dungeons and Dragons campaign.
+
+ \
+ \
+ 
+
+ \
+ \
+ 
+
+```{r}
+install.packages("rvest")
+install.packages("RedditExtractoR")
+install.packages("textclean")
+install.packages("textdata")
+library(RedditExtractoR)
+library(rvest)
+library(tidyverse)
+library(quanteda)
+library(quanteda.textplots)
+library(textclean)
+library(quanteda.textmodels)
+library(ggplot2)
+library(quanteda.dictionaries)
+library(quanteda.sentiment)
+library(syuzhet)
+library(tidytext)
+library(textdata)
+library(text2vec)
+library(stm)
+library(quanteda)
+
+
+url <- c("https://www.reddit.com/r/DnD/comments/b1pk5c/tell_me_about_your_characters/", 
+         "https://www.reddit.com/r/DnD/comments/33bv4f/best_dd_character_youve_made_or_seen/",
+         "https://www.reddit.com/r/DnD/comments/37cx49/your_first_ever_dd_character/",
+         "https://www.reddit.com/r/rpg/comments/2fk4op/best_dd_character_youve_ever_made/",
+         "https://www.reddit.com/r/DnD/comments/cgdwgl/share_your_dnd_character/",
+         "https://www.reddit.com/r/dndnext/comments/au8k0w/what_are_some_of_your_favourite_dd_character/")
+
+comments <- get_thread_content(url)
+```
+
+## Preprocessing
+
+```{r}
+#preprocessing
+all_comments <- 
+  comments$comments$comment %>% 
+  str_replace_all("\n"," ")           #data cleaning
+
+all_comments <- replace_contraction(all_comments)     #opened all contractions, like didn't to did not
+
+tail(all_comments, n = 10)    #Some of the comments
+
+reddit_DnD_characters <- corpus(all_comments)
+DnD_summary <- summary(reddit_DnD_characters, n = Inf)
+DnD_summary             #SUmmary of the corpus
+
+DnD_summary1 <- as.tibble(reddit_DnD_characters)
+colnames(DnD_summary1) = "text" 
+
+DnD_tokens <- tokens(reddit_DnD_characters); DnD_tokens       #tokens before preprosessing
+
+#Removed Punctuation
+#Removed symbols
+#Removed Numbers
+#Removed Stopwords
+
+DnD_tokens <- tokens(reddit_DnD_characters, remove_punct=TRUE, remove_symbols = TRUE,
+                     remove_numbers = TRUE) %>%
+  tokens_select(pattern=stopwords("en"), selection="remove"); DnD_tokens
+
+DnD_dfm <- DnD_tokens %>% 
+  dfm() %>%
+  dfm_trim(min_termfreq = 20, verbose = FALSE)
+
+DnD_dfm         #The DFM
+all_features <- featnames(DnD_dfm); all_features
+```
+
+ \
+ \
+ 
+
+::: callout-note
+## Note
+
+Now we look at some of the common words in our document feature matrix and evaluate whether they are important in the context of characters created by the D&D players. If they are not, they will be removed from our Bag of Words.
+:::
+
+ \
+ \
+ 
+
+```{r}
+
+kwic_time <- kwic(reddit_DnD_characters, pattern = phrase("time")); head(kwic_time, n=10)
+
+kwic_character <- kwic(reddit_DnD_characters, pattern = phrase("character")); head(kwic_character, n=10)
+
+kwic_party <- kwic(reddit_DnD_characters, pattern = phrase("party")); head(kwic_party, n=10)
+
+kwic_love <- kwic(reddit_DnD_characters, pattern = phrase("love")); head(kwic_love, n=10)
+
+kwic_kind <- kwic(reddit_DnD_characters, pattern = phrase("kind")); head(kwic_kind, n=10)
+
+kwic_man <- kwic(reddit_DnD_characters, pattern = phrase("man")); head(kwic_man, n=10)
+
+kwic_full <- kwic(reddit_DnD_characters, pattern = phrase("full")); head(kwic_full, n=10)
+
+kwic_group <- kwic(reddit_DnD_characters, pattern = phrase("group")); head(kwic_group, n=10)
+
+kwic_barbarian <- kwic(reddit_DnD_characters, pattern = phrase("barbarian")); head(kwic_barbarian, n=10)
+
+kwic_dragonborn <- kwic(reddit_DnD_characters, pattern = phrase("dragonborn")); head(kwic_dragonborn, n=10)
+```
+
+ \
+ \
+ 
+
+::: callout-note
+## Note
+
+You can see from the contextual analysis words like time, character, love, etc., are used in the colloquial sense and does not add any meaning to our analysis of the characters, however, words like bargarian, dragonborn are directly related to the characters defined by the D&D players. Hence, we remove many common words from our DFM.
+:::
+
+ \
+ \
+ 
+
+```{r}
+DnD_dfm1 <- dfm_remove(DnD_dfm, c("give", "love", "well", "also", "go", "way", "help", "like", "fun", "fire", "always", "character",
+                                  "used", "basically", "just", "make", "s", "even", "name","play", "dead", "weapon", "better", "later", 
+                                  "little", "others", "people", "world", "home", "house","however", "made", "small", "back",
+                                  "called", "two", "time", "soon",  "going", "sure", "last", "pretty", "party", "big", "d", "amp",
+                                  "think", "best", "life", "many", "left", "see", "since", "named", "real", "something", "new","part",
+                                  "ever", "one", "day", "got", "away", "took", "came", "found", "decided", "find", "now", "right",
+                                  "person", "first", "can", "group", "times", "trying", "long", "remember", "place", "went", "lot",                                          "still","around", "using", "get", "things", "use", "try", "much", "another", "currently", "never", 
+                                  "really","due", "without", "started", "became", "become", "far", "take", "every", "characters", "want",                                    "let", "know", "ended", "everyone", "gave", "though", "almost", "said", "great", "guy", "enough",
+                                  "actually", "eventually", "set", "next", "tried", "managed", "kept", "thought", "playing", "thing",                                        "rest", "everything"))
+
+featnames(DnD_dfm1)
+
+topfeatures(DnD_dfm1, 100)
+
+textplot_wordcloud(DnD_dfm1)      #Word Cloud of the existing tokens
+
+
+kwic_chaotic_good <- kwic(reddit_DnD_characters, pattern = phrase("chaotic good")); head(kwic_chaotic_good, n=100)
+kwic_lawful_good <- kwic(reddit_DnD_characters, pattern = phrase("lawful good")); head(kwic_lawful_good, n=100)
+kwic_neutral_good <- kwic(reddit_DnD_characters, pattern = phrase("neutral good")); head(kwic_neutral_good, n=100)
+
+kwic_family <- kwic(reddit_DnD_characters, pattern = phrase("family")); head(kwic_family, n=10)
+kwic_father <- kwic(reddit_DnD_characters, pattern = phrase("father")); head(kwic_father, n=10)
+kwic_brother <- kwic(reddit_DnD_characters, pattern = phrase("brother")); head(kwic_brother, n=10)
+```
+
+ \
+ \
+ 
+
+::: callout-note
+## Note
+
+Here we can see the words like father, brother, and family are used in the context of creating a back story for the character created by the player, however, they just provide metadata about the character, therefore, even though it is important in terms of the character building, they are not directly related to the features of the character itself.
+
+Bi-grams like chaotic good, lawful good, and neutral good are used to describe the personality of the characters.
+
+**Chaotic good** is the philosophy that goodness is best achieved through the freedom of individuals to act independently. It is a philosophy of altruistic individualism. This philosophy holds that people should behave altruistically and that society exists for the sake of its individual members.
+
+**Lawful good** is the philosophy that goodness is best achieved through law and order. It is a philosophy of altruistic collectivism. This philosophy holds that people should behave altruistically and put the needs of the group ahead of individual desires.
+
+**Neutral good** is the philosophy that goodness should be advanced by using whatever means provide the most benefit. It is a philosophy of altruistic consequentialism. This philosophy holds that people should behave altruistically and balance the needs of the collective as a whole and the needs of the individuals making up the collective.
+:::
+
+ \
+ \
+ 
+
+```{r}
+DnD_dfm_char <- dfm_remove(DnD_dfm1, c("good", "fight", "chaotic", "kind", "campaign", "war", "killed", "story", "death", "old", "friend", 
+                                       "city","full", "man", "knowledge", "gold", "game", "played", "level", "high", "neutral", "hand", 
+                                       "town", "order", "often", "player", "hit",  "battle", "player", "damage", "lawful", "idea", "years",
+                                       "shield", "powerful", "evil", "bad", "strength", "work", "kill", "giant", "wanted", "mind",                                                "village","save", "end", "point", "combat", "dm", "favorite", "died", "magical", "class", "orc", 
+                                       "cast", "half", "spell", "family", "brother", "father", "race", "young", "halfling"))
+
+DnD_dfm_char
+
+topfeatures(DnD_dfm_char, 100)
+
+textplot_wordcloud(DnD_dfm_char)
+
+                           
+#creating a Network plot
+DnD_fcm = fcm(DnD_dfm_char)
+
+# pull the top features
+myFeatures = names(topfeatures(DnD_fcm, 20))
+
+# retain only those top features as part of our matrix
+Smaller_fsm = fcm_select(DnD_fcm, pattern = myFeatures, selection = "keep")
+
+# compute size weight for vertices in network
+size = log(colSums(Smaller_fsm))
+
+# create plot
+textplot_network(Smaller_fsm, vertex_size = size / max(size) * 3)
+```
+
+ \
+ \
+ 
+
+::: callout-note
+## Note
+
+Here, you can read more about the different classes of characters you see in the word cloud and network plot.
+
+[Different Character Classes of D&D characters](https://www.dndbeyond.com/classes)
+:::
+
+ \
+ \
+ 
+
+## Sentiment Analysis
+
+::: callout-note
+## Note
+
+I will be using the NRC and General Inquirer dictionaries for sentiment analysis.
+:::
+
+```{r}
+reviewSentiment_nrc <- liwcalike(reddit_DnD_characters, data_dictionary_NRC)
+
+reviewSentiment_nrc$polarity <- reviewSentiment_nrc$positive - reviewSentiment_nrc$negative
+
+
+ggplot(reviewSentiment_nrc) +
+  geom_histogram(aes(polarity))
+
+reddit_DnD_characters[which(reviewSentiment_nrc$polarity > 40)]
+
+DFM_NRC <- dfm_lookup(DnD_dfm1, data_dictionary_NRC)
+
+df_nrc <- convert(DFM_NRC, to = "data.frame")
+
+df_nrc$polarity <- (df_nrc$positive - df_nrc$negative)/(df_nrc$positive + df_nrc$negative)
+
+df_nrc$polarity[(df_nrc$positive + df_nrc$negative) == 0] <- 0
+
+ggplot(df_nrc) +
+  geom_histogram(aes(x=polarity))
+
+writeLines(head(reddit_DnD_characters[which(df_nrc$polarity == -1)]))
+
+writeLines(head(reddit_DnD_characters[which(df_nrc$polarity == 1)]))
+
+
+xyz <- DnD_summary1 %>%
+ select(text) %>%
+  unnest_tokens(word, text)
+
+sentiment_word_counts <- xyz %>%
+  inner_join(get_sentiments("nrc")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+sentiment_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(9) %>%
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(title = "Sentiment terms",
+       y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+
+
+
+abc <- get_sentences(DnD_summary1$text)
+
+nrc_data <- get_nrc_sentiment(abc)
+
+valence <- (nrc_data[, 9]*-1) + nrc_data[, 10]
+
+barplot(
+  sort(colSums(prop.table(nrc_data[, 1:8]))), 
+  horiz = TRUE, 
+  cex.names = 0.7, 
+  las = 1, 
+  main = "Emotions in full corpus", xlab="Percentage"
+  )
+
+
+reviewSentiment_genq <- liwcalike(reddit_DnD_characters, data_dictionary_geninqposneg)
+
+reviewSentiment_genq$polarity <- reviewSentiment_genq$positive - reviewSentiment_genq$negative
+
+ggplot(reviewSentiment_genq) +
+  geom_histogram(aes(polarity))
+
+DFM_genq <- dfm_lookup(DnD_dfm1, data_dictionary_geninqposneg)
+
+df_genq <- convert(DFM_genq, to = "data.frame")
+
+df_genq$polarity <- (df_genq$positive - df_genq$negative)/(df_genq$positive + df_genq$negative)
+
+df_genq$polarity[(df_genq$positive + df_genq$negative) == 0] <- 0
+
+ggplot(df_genq) +
+  geom_histogram(aes(x=polarity))
+
+colnames(df_nrc) <- paste("nrc", colnames(df_nrc), sep = "_")
+colnames(df_genq) <- paste("genq", colnames(df_genq), sep = "_")
+
+sent_df <- merge(df_nrc, df_genq, by.x = "nrc_doc_id", by.y = "genq_doc_id")
+
+cor(sent_df$nrc_polarity, sent_df$genq_polarity)
+
+ggplot(sent_df, mapping = aes(x = nrc_polarity,
+                              y = genq_polarity)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth() +
+  geom_abline(intercept = 0, slope = 1, color = "red")
+```
+
+You can see players talk about their characters in a very positive sense. Hence, I like to believe the overall sentiment of the players while describing their characters is positive. This is also confirmed when the sentiment analysis is done using the second dictionary. The high correlation of 0.567 shows that both the dictionaries find the same trend in the text.  
+
+
+ \
+ \
+ 
+
+
+
+## Topic Modeling  
+
+```{r}
+cor_topic_model <- stm(DnD_dfm_char, K = 10,
+                       verbose = FALSE, init.type = "Spectral")
+cor_topic_model
+summary(cor_topic_model)
+labelTopics(cor_topic_model)
+
+k <- 10
+
+DnD_df <- convert(reddit_DnD_characters, to = "data.frame") 
+  
+# specify model
+myModel <- stm(DnD_dfm_char,
+               K = k,
+               prevalence = ,
+               data = DnD_df,
+               max.em.its = 1000,
+               seed = 1234,
+               init.type = "Spectral")
+
+labelTopics(myModel)
+plot(myModel, type = "summary")
+
+# get the words
+myTopicNames <- labelTopics(myModel, n=10)$frex
+
+# set up an empty vector
+myTopicLabels <- rep(NA, k)
+
+# set up a loop to go through the topics and collapse the words to a single name
+for (i in 1:k){
+  myTopicLabels[i] <- paste(myTopicNames[i,], collapse = "_")
+}
+
+# print the names
+myTopicLabels
+
+
+differentKs <- searchK(DnD_dfm_char,
+                       K = c(4, 6, 8, 10, 12, 14, 16),
+                       N = 250,
+                       data = DnD_df,
+                       max.em.its = 1000,
+                       init.type = "Spectral")
+plot(differentKs)
+
+```
+
+
