@@ -4,11 +4,9 @@ author: "Mantek Singh Bhatia"
 desription: "Blog Post 4"
 date: "11/04/2022"
 format:
-  html:
+  pdf: 
     toc: true
-    code-fold: true
-    code-copy: true
-    code-tools: true
+    number-sections: true
 categories:
   - Blog Post 4
   - Mantek Singh Bhatia

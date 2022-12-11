@@ -4,11 +4,9 @@ author: "Mantek Singh Bhatia"
 desription: "First Blog Post - Literature Review"
 date: "10/25/2022"
 format:
-  html:
+  pdf: 
     toc: true
-    code-fold: true
-    code-copy: true
-    code-tools: true
+    number-sections: true
 categories:
   - Blog Post 3
   - Mantek Singh Bhatia

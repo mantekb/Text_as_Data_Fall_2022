@@ -4,11 +4,9 @@ author: "Your Name"
 desription: "Something to describe what I did"
 date: "08/02/2022"
 format:
-  html:
+  pdf: 
     toc: true
-    code-fold: true
-    code-copy: true
-    code-tools: true
+    number-sections: true
 categories:
   - hw1
   - challenge1
